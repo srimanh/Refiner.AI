@@ -69,7 +69,7 @@ function CodeAnalyser({ code, language = 'javascript' }) {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[#1e1e1e] text-white">
+        <div className="flex flex-col h-full bg-black text-white">
             <div className="p-4 border-b border-[#333] flex justify-between items-center">
                 <h2 className="text-xl text-[#61dafb]">Code Analysis</h2>
                 <div className="flex space-x-4">

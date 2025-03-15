@@ -4,6 +4,7 @@ import axios from 'axios';
 import { getCorrectedCode } from '../utils/codeCorrector';
 import Editor from '@monaco-editor/react';
 import CodeAnalyser from './CodeAnalyser';
+import Header from '../components/header'
 const token = import.meta.env.VITE_GITHUB_TOKEN;
 
 const fetchContents = async (url, setError) => {
@@ -53,6 +54,12 @@ const RepoViewer = () => {
     const [commitMessage, setCommitMessage] = useState('');
     const [pendingChanges, setPendingChanges] = useState([]);
     const [correctionLoading, setCorrectionLoading] = useState(false);
+    const [fileExplorerWidth, setFileExplorerWidth] = useState(300);
+    const [codeAnalyzerWidth, setCodeAnalyzerWidth] = useState(400);
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStartX, setDragStartX] = useState(0);
+    const [dragStartWidth, setDragStartWidth] = useState(0);
+    const [dragType, setDragType] = useState(null);
 
     useEffect(() => {
         if (repoUrl) {
@@ -65,6 +72,21 @@ const RepoViewer = () => {
         const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
         return match ? [match[1], match[2]] : [null, null];
     };
+    const handleEditorDidMount = (editor, monaco) => {
+        monaco.editor.defineTheme('black-theme', {
+            base: 'vs-dark',
+            inherit: true,
+            rules: [],
+            colors: {
+                'editor.background': '#000000',    // Pure black background
+                'editor.foreground': '#FFFFFF',    // White text for contrast
+                'editorLineNumber.foreground': '#AAAAAA',  // Grey line numbers for readability
+            }
+        });
+    
+        monaco.editor.setTheme('black-theme');
+    };
+    
 
     const handleFetchRepo = async () => {
         setError(null);
@@ -146,47 +168,48 @@ const RepoViewer = () => {
     };
 
     const handleCreateFile = async () => {
-        if (!newFileName) return;
+        if (!newFileName) {
+            setError('Please enter a file name');
+            return;
+        }
+
+        // Validate file name
+        if (!/^[a-zA-Z0-9._-]+$/.test(newFileName)) {
+            setError('File name can only contain letters, numbers, dots, underscores, and hyphens');
+            return;
+        }
         
-        const [owner, repo] = extractOwnerAndRepo(repoUrl);
         const path = currentPath ? `${currentPath}/${newFileName}` : newFileName;
         
-        try {
-            const content = '';
-            const encodedContent = btoa(content);
-            
-            const response = await axios.get(
-                `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${defaultBranch}`,
-                {
-                    headers: { Authorization: `token ${token}` },
-                }
-            ).catch(() => ({ data: null })); // File doesn't exist yet
-
-            if (response.data) {
-                setError('File already exists');
-                return;
-            }
-            
-            await axios.put(
-                `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
-                {
-                    message: `Create ${path}`,
-                    content: encodedContent,
-                    branch: defaultBranch,
-                },
-                {
-                    headers: { Authorization: `token ${token}` },
-                }
-            );
-            
-            handleFetchRepo();
-            setShowNewFileDialog(false);
-            setNewFileName('');
-            addToPendingChanges('create', path);
-        } catch (error) {
-            console.error('Error creating file:', error);
-            setError('Failed to create file');
+        // Check if file already exists in local state
+        const fileExists = files.some(file => file.path === path);
+        if (fileExists) {
+            setError('File already exists');
+            return;
         }
+        
+        // Create new file object
+        const newFile = {
+            name: newFileName,
+            path: path,
+            type: 'file',
+            content: '',
+            sha: Date.now().toString(), // Generate a temporary SHA
+        };
+        
+        // Add new file to files state
+        setFiles(prevFiles => [...prevFiles, newFile]);
+        setShowNewFileDialog(false);
+        setNewFileName('');
+        setError(null);
+        
+        // Set as selected file and open in editor
+        setSelectedFile(path);
+        setFileContent('');
+        setIsEditing(true);
+        
+        // Add to pending changes
+        addToPendingChanges('create', path);
     };
 
     const handleSaveFile = async () => {
@@ -461,240 +484,351 @@ const RepoViewer = () => {
         }
     };
 
+    const handleResizeStart = (e, type) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(true);
+        setDragStartX(e.clientX);
+        setDragType(type);
+        if (type === 'left') {
+            setDragStartWidth(fileExplorerWidth);
+        } else {
+            setDragStartWidth(codeAnalyzerWidth);
+        }
+    };
+
+    const handleResizeMove = (e) => {
+        if (!isDragging) return;
+
+        const diff = e.clientX - dragStartX;
+        if (dragType === 'left') {
+            const newWidth = Math.max(200, Math.min(600, dragStartWidth + diff));
+            setFileExplorerWidth(newWidth);
+        } else {
+            const newWidth = Math.max(200, Math.min(600, dragStartWidth - diff));
+            setCodeAnalyzerWidth(newWidth);
+        }
+    };
+
+    const handleResizeEnd = () => {
+        setIsDragging(false);
+    };
+
+    // Add useEffect for global event listeners
+    useEffect(() => {
+        if (isDragging) {
+            window.addEventListener('mousemove', handleResizeMove);
+            window.addEventListener('mouseup', handleResizeEnd);
+        }
+
+        return () => {
+            window.removeEventListener('mousemove', handleResizeMove);
+            window.removeEventListener('mouseup', handleResizeEnd);
+        };
+    }, [isDragging, dragStartX, dragStartWidth, dragType]);
+
+    
+
     return (
-        <div style={{ display: 'flex', height: '100vh' }}>
-            <div style={{ width: '300px', background: '#1e1e1e', color: 'white', overflowY: 'auto', borderRight: '1px solid #333' }}>
-                <div style={{ padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={{ color: '#61dafb' }}>Explorer</h2>
-                    <div className="space-x-2">
-                        <button
-                            onClick={() => {
-                                setShowNewFileDialog(true);
-                                setCurrentPath('');
-                            }}
-                            className="px-2 py-1 bg-[#333] hover:bg-[#444] rounded"
-                        >
-                            + New File
-                        </button>
-                        {pendingChanges.length > 0 && (
-                            <button
-                                onClick={() => setShowCommitDialog(true)}
-                                className="px-2 py-1 bg-[#0078d4] hover:bg-[#0086ef] rounded"
-                            >
-                                Commit Changes ({pendingChanges.length})
-                            </button>
-                        )}
-                    </div>
-                </div>
-                {error && <div style={{ color: 'red', margin: '10px 20px' }}>{error}</div>}
-                <div style={{ marginTop: '10px' }}>{renderFileTree(files)}</div>
-
-                {pendingChanges.length > 0 && (
-                    <div className="mt-4 p-4 border-t border-[#333]">
-                        <h3 className="text-[#61dafb] mb-2">Pending Changes</h3>
-                        {pendingChanges.map((change, index) => (
-                            <div key={index} className="text-sm mb-1 flex items-center">
-                                <span className={`mr-2 ${
-                                    change.type === 'create' ? 'text-green-500' :
-                                    change.type === 'modify' ? 'text-yellow-500' :
-                                    'text-red-500'
-                                }`}>
-                                    {change.type === 'create' ? '+ ' :
-                                     change.type === 'modify' ? '~ ' :
-                                     '- '}
-                                </span>
-                                {change.path}
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
-                {selectedFile && (
-                    <div style={{ padding: '10px 20px', background: '#252526', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3 style={{ color: '#61dafb' }}>{selectedFile}</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#000000' }}>
+            <Header />
+            <div style={{ 
+                display: 'flex', 
+                flex: 1, 
+                position: 'relative', 
+                userSelect: isDragging ? 'none' : 'auto',
+                overflow: 'hidden',
+                background: '#000000'
+            }}>
+                <div style={{ 
+                    width: `${fileExplorerWidth}px`, 
+                    background: '#000000', 
+                    color: 'white', 
+                    overflowY: 'auto', 
+                    borderRight: '1px solid #333',
+                    position: 'relative',
+                    flexShrink: 0
+                }}>
+                    <div style={{ padding: '10px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#000000' }}>
+                        <h2 style={{ color: '#61dafb' }}>Explorer</h2>
                         <div className="space-x-2">
-                            {isEditing && (
-                                <button
-                                    onClick={handleSaveFile}
-                                    className="px-3 py-1 bg-[#0078d4] hover:bg-[#0086ef] rounded"
-                                >
-                                    Save
-                                </button>
-                            )}
-                            <button
-                                onClick={handleCorrectCode}
-                                disabled={correctionLoading}
-                                className={`px-3 py-1 ${
-                                    correctionLoading 
-                                        ? 'bg-[#333] opacity-50 cursor-not-allowed' 
-                                        : 'bg-[#333] hover:bg-[#444] cursor-pointer'
-                                } rounded flex items-center space-x-2`}
-                            >
-                                {correctionLoading ? (
-                                    <>
-                                        <span className="inline-block animate-spin mr-2">⟳</span>
-                                        Analyzing...
-                                    </>
-                                ) : (
-                                    'Analyze Code'
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                )}
-                
-                {loading ? (
-                    <div className="flex-1 flex items-center justify-center">
-                        <p>Loading...</p>
-                    </div>
-                ) : selectedFile ? (
-                    <div className="flex-1 flex">
-                        <div style={{ flex: 1, height: '100%' }}>
-                            <Editor
-                                height="100%"
-                                defaultLanguage={detectLanguage(selectedFile)}
-                                value={fileContent}
-                                onChange={(value) => {
-                                    setFileContent(value);
-                                    setIsEditing(true);
-                                }}
-                                theme="vs-dark"
-                                options={{
-                                    minimap: { enabled: true },
-                                    fontSize: 14,
-                                    wordWrap: 'on',
-                                    automaticLayout: true,
-                                }}
-                            />
-                        </div>
-                    </div>
-                ) : (
-                    <div className="flex-1 flex items-center justify-center text-gray-400">
-                        Select a file to edit
-                    </div>
-                )}
-            </div>
-
-            {/* Code Analyzer Panel */}
-            <div style={{ width: '400px', borderLeft: '1px solid #333', height: '100%', overflow: 'auto' }}>
-                <CodeAnalyser code={fileContent} language={selectedFile ? detectLanguage(selectedFile) : 'plaintext'} />
-            </div>
-
-            {/* New File Dialog */}
-            {showNewFileDialog && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                    <div className="bg-[#1e1e1e] p-6 rounded-lg shadow-xl">
-                        <h3 className="text-white mb-4">Create New File</h3>
-                        <input
-                            type="text"
-                            value={newFileName}
-                            onChange={(e) => setNewFileName(e.target.value)}
-                            placeholder="Enter file name"
-                            className="w-full px-3 py-2 bg-[#333] text-white rounded mb-4 outline-none focus:ring-2 focus:ring-[#0078d4]"
-                        />
-                        <div className="flex justify-end space-x-2">
                             <button
                                 onClick={() => {
-                                    setShowNewFileDialog(false);
-                                    setNewFileName('');
+                                    setShowNewFileDialog(true);
+                                    setCurrentPath('');
                                 }}
-                                className="px-3 py-1 bg-[#333] hover:bg-[#444] rounded text-white"
+                                className="px-2 py-1 bg-[#333] hover:bg-[#444] rounded"
                             >
-                                Cancel
+                                + New File
                             </button>
-                            <button
-                                onClick={handleCreateFile}
-                                className="px-3 py-1 bg-[#0078d4] hover:bg-[#0086ef] rounded text-white"
-                            >
-                                Create
-                            </button>
+                            {pendingChanges.length > 0 && (
+                                <button
+                                    onClick={() => setShowCommitDialog(true)}
+                                    className="px-2 py-1 bg-[#0078d4] hover:bg-[#0086ef] rounded"
+                                >
+                                    Commit Changes ({pendingChanges.length})
+                                </button>
+                            )}
                         </div>
                     </div>
-                </div>
-            )}
+                    {error && <div style={{ color: 'red', margin: '10px 20px' }}>{error}</div>}
+                    <div style={{ marginTop: '10px' }}>{renderFileTree(files)}</div>
 
-            {/* Commit Dialog */}
-            {showCommitDialog && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                    <div className="bg-[#1e1e1e] p-6 rounded-lg shadow-xl w-[500px]">
-                        <h3 className="text-white mb-4">Commit Changes</h3>
-                        <div className="mb-4">
-                            <h4 className="text-[#61dafb] mb-2">Changes to commit:</h4>
+                    {pendingChanges.length > 0 && (
+                        <div className="mt-4 p-4 border-t border-[#333]">
+                            <h3 className="text-[#61dafb] mb-2">Pending Changes</h3>
                             {pendingChanges.map((change, index) => (
-                                <div key={index} className="text-sm mb-1 text-white">
-                                    {change.type === 'create' ? '+ ' :
-                                     change.type === 'modify' ? '~ ' :
-                                     '- '}
+                                <div key={index} className="text-sm mb-1 flex items-center">
+                                    <span className={`mr-2 ${
+                                        change.type === 'create' ? 'text-green-500' :
+                                        change.type === 'modify' ? 'text-yellow-500' :
+                                        'text-red-500'
+                                    }`}>
+                                        {change.type === 'create' ? '+ ' :
+                                         change.type === 'modify' ? '~ ' :
+                                         '- '}
+                                    </span>
                                     {change.path}
                                 </div>
                             ))}
                         </div>
-                        <textarea
-                            value={commitMessage}
-                            onChange={(e) => setCommitMessage(e.target.value)}
-                            placeholder="Enter commit message"
-                            className="w-full px-3 py-2 bg-[#333] text-white rounded mb-4 outline-none focus:ring-2 focus:ring-[#0078d4] min-h-[100px]"
-                        />
-                        <div className="flex justify-end space-x-2">
-                            <button
-                                onClick={() => {
-                                    setShowCommitDialog(false);
-                                    setCommitMessage('');
-                                }}
-                                className="px-3 py-1 bg-[#333] hover:bg-[#444] rounded text-white"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleCommitChanges}
-                                className="px-3 py-1 bg-[#0078d4] hover:bg-[#0086ef] rounded text-white"
-                            >
-                                Commit
-                            </button>
+                    )}
+                </div>
+
+                <div
+                    style={{
+                        width: '1.5px',
+                        cursor: 'col-resize',
+                        background: isDragging ? '#0078d4' : '#333',
+                        position: 'relative',
+                        zIndex: 1000,
+                        flexShrink: 0,
+                        margin: '0 -2px',
+                        transition: 'background-color 0.2s',
+                        userSelect: 'none'
+                    }}
+                    onMouseDown={(e) => handleResizeStart(e, 'left')}
+                />
+
+                <div style={{ 
+                    flex: 1, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    height: '100%',
+                    minWidth: 0,
+                    userSelect: isDragging ? 'none' : 'auto',
+                    background: '#000000'
+                }}>
+                    {selectedFile && (
+                        <div style={{ padding: '10px 20px', background: '#000000', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ color: '#61dafb' }}>{selectedFile}</h3>
+                            <div className="space-x-2">
+                                {isEditing && (
+                                    <button
+                                        onClick={handleSaveFile}
+                                        className="px-3 py-1 bg-[#0078d4] hover:bg-[#0086ef] rounded"
+                                    >
+                                        Save
+                                    </button>
+                                )}
+                                <button
+                                    onClick={handleCorrectCode}
+                                    disabled={correctionLoading}
+                                    className={`px-3 py-1 ${
+                                        correctionLoading 
+                                            ? 'bg-[#333] opacity-50 cursor-not-allowed' 
+                                            : 'bg-[#333] hover:bg-[#444] cursor-pointer'
+                                    } rounded flex items-center space-x-2`}
+                                >
+                                    {correctionLoading ? (
+                                        <>
+                                            <span className="inline-block animate-spin mr-2">⟳</span>
+                                            Analyzing...
+                                        </>
+                                    ) : (
+                                        'Analyze Code'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {loading ? (
+                        <div className="flex-1 flex items-center justify-center">
+                            <p>Loading...</p>
+                        </div>
+                    ) : selectedFile ? (
+                        <div className="flex-1 flex">
+                            <div style={{ flex: 1, height: '100%', background: '#000000' }}>
+                                <Editor
+                                    height="100%"
+                                    defaultLanguage={detectLanguage(selectedFile)}
+                                    value={fileContent}
+                                    onChange={(value) => {
+                                        setFileContent(value);
+                                        setIsEditing(true);
+                                    }}
+                                    theme="vs-dark"
+                                    onMount={handleEditorDidMount}
+                                    options={{
+                                        minimap: { enabled: true },
+                                        fontSize: 14,
+                                        wordWrap: 'on',
+                                        automaticLayout: true,
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex items-center justify-center text-gray-400">
+                            Select a file to edit
+                        </div>
+                    )}
+                </div>
+
+                <div
+                    style={{
+                        width: '1px',
+                        cursor: 'col-resize',
+                        background: isDragging ? '#0078d4' : '#333',
+                        position: 'relative',
+                        zIndex: 1000,
+                        flexShrink: 0,
+                        margin: '0 -2px',
+                        transition: 'background-color 0.2s',
+                        userSelect: 'none'
+                    }}
+                    onMouseDown={(e) => handleResizeStart(e, 'right')}
+                />
+
+                {/* Code Analyzer Panel */}
+                <div style={{ 
+                    width: `${codeAnalyzerWidth}px`, 
+                    borderLeft: '1px solid #333', 
+                    height: '100%', 
+                    overflow: 'auto',
+                    position: 'relative',
+                    flexShrink: 0,
+                    userSelect: isDragging ? 'none' : 'auto',
+                    background: '#000000'
+                }}>
+                    <CodeAnalyser code={fileContent} language={selectedFile ? detectLanguage(selectedFile) : 'plaintext'} />
+                </div>
+
+                {/* New File Dialog */}
+                {showNewFileDialog && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <div className="bg-[#000000] p-6 rounded-lg shadow-xl border border-[#333]">
+                            <h3 className="text-white mb-4">Create New File</h3>
+                            <input
+                                type="text"
+                                value={newFileName}
+                                onChange={(e) => setNewFileName(e.target.value)}
+                                placeholder="Enter file name"
+                                className="w-full px-3 py-2 bg-[#333] text-white rounded mb-4 outline-none focus:ring-2 focus:ring-[#0078d4]"
+                            />
+                            <div className="flex justify-end space-x-2">
+                                <button
+                                    onClick={() => {
+                                        setShowNewFileDialog(false);
+                                        setNewFileName('');
+                                    }}
+                                    className="px-3 py-1 bg-[#333] hover:bg-[#444] rounded text-white"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCreateFile}
+                                    className="px-3 py-1 bg-[#0078d4] hover:bg-[#0086ef] rounded text-white"
+                                >
+                                    Create
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {/* Context Menu */}
-            {contextMenu.show && (
-                <>
-                    <div
-                        className="fixed inset-0"
-                        onClick={() => setContextMenu({ ...contextMenu, show: false })}
-                    />
-                    <div
-                        className="fixed bg-[#1e1e1e] border border-[#333] rounded shadow-lg py-1"
-                        style={{ left: contextMenu.x, top: contextMenu.y }}
-                    >
-                        {contextMenu.type === 'folder' && (
-                            <button
-                                onClick={() => {
-                                    setCurrentPath(contextMenu.path);
-                                    setShowNewFileDialog(true);
-                                    setContextMenu({ ...contextMenu, show: false });
-                                }}
-                                className="w-full px-4 py-2 text-left text-white hover:bg-[#333]"
-                            >
-                                New File
-                            </button>
-                        )}
-                        {contextMenu.type === 'file' && (
-                            <button
-                                onClick={() => {
-                                    handleDeleteFile(contextMenu.path);
-                                    setContextMenu({ ...contextMenu, show: false });
-                                }}
-                                className="w-full px-4 py-2 text-left text-white hover:bg-[#333]"
-                            >
-                                Delete
-                            </button>
-                        )}
+                {/* Commit Dialog */}
+                {showCommitDialog && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                        <div className="bg-[#000000] p-6 rounded-lg shadow-xl w-[500px] border border-[#333]">
+                            <h3 className="text-white mb-4">Commit Changes</h3>
+                            <div className="mb-4">
+                                <h4 className="text-[#61dafb] mb-2">Changes to commit:</h4>
+                                {pendingChanges.map((change, index) => (
+                                    <div key={index} className="text-sm mb-1 text-white">
+                                        {change.type === 'create' ? '+ ' :
+                                         change.type === 'modify' ? '~ ' :
+                                         '- '}
+                                        {change.path}
+                                    </div>
+                                ))}
+                            </div>
+                            <textarea
+                                value={commitMessage}
+                                onChange={(e) => setCommitMessage(e.target.value)}
+                                placeholder="Enter commit message"
+                                className="w-full px-3 py-2 bg-[#333] text-white rounded mb-4 outline-none focus:ring-2 focus:ring-[#0078d4] min-h-[100px]"
+                            />
+                            <div className="flex justify-end space-x-2">
+                                <button
+                                    onClick={() => {
+                                        setShowCommitDialog(false);
+                                        setCommitMessage('');
+                                    }}
+                                    className="px-3 py-1 bg-[#333] hover:bg-[#444] rounded text-white"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCommitChanges}
+                                    className="px-3 py-1 bg-[#0078d4] hover:bg-[#0086ef] rounded text-white"
+                                >
+                                    Commit
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                </>
-            )}
+                )}
+
+                {/* Context Menu */}
+                {contextMenu.show && (
+                    <>
+                        <div
+                            className="fixed inset-0"
+                            onClick={() => setContextMenu({ ...contextMenu, show: false })}
+                        />
+                        <div
+                            className="fixed bg-[#000000] border border-[#333] rounded shadow-lg py-1"
+                            style={{ left: contextMenu.x, top: contextMenu.y }}
+                        >
+                            {contextMenu.type === 'folder' && (
+                                <button
+                                    onClick={() => {
+                                        setCurrentPath(contextMenu.path);
+                                        setShowNewFileDialog(true);
+                                        setContextMenu({ ...contextMenu, show: false });
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-white hover:bg-[#333]"
+                                >
+                                    New File
+                                </button>
+                            )}
+                            {contextMenu.type === 'file' && (
+                                <button
+                                    onClick={() => {
+                                        handleDeleteFile(contextMenu.path);
+                                        setContextMenu({ ...contextMenu, show: false });
+                                    }}
+                                    className="w-full px-4 py-2 text-left text-white hover:bg-[#333]"
+                                >
+                                    Delete
+                                </button>
+                            )}
+                        </div>
+                    </>
+                )}
+            </div>
         </div>
     );
 };

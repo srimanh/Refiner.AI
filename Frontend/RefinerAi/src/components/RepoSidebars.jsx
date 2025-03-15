@@ -19,7 +19,7 @@ function RepoSidebars() {
         isCollapsed ? 'w-[80px]' : 'w-[400px]'
       }`}
     >
-      <div className="m-[10px] h-[100vh] overflow-y-scroll">
+      <div className="m-[10px] h-[100vh] bg-black overflow-y-scroll">
         {/* Menu Toggle Button */}
         <button
           className="flex items-center p-3 hover:bg-[#ffffff10] rounded-lg transition-all duration-300 w-full"
