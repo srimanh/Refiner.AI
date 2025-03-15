@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeCode } from '../utils/codeAnalyzer'
 import rehypeHighlight from 'rehype-highlight';
+import Editor from '@monaco-editor/react';
 
 function CodeAnalyser({ code, language = 'javascript', onExplain }) {
     const [analysis, setAnalysis] = useState(null);
@@ -91,12 +92,18 @@ function CodeAnalyser({ code, language = 'javascript', onExplain }) {
                 )}
 
                 {analysis ? (
-                    <ReactMarkdown
-                        // className="prose prose-invert max-w-none"
-                        rehypePlugins={[rehypeHighlight]}
-                    >
-                        {analysis}
-                    </ReactMarkdown>
+                    <Editor
+                        height="100%"
+                        // defaultLanguage={detectLanguage(selectedFile)}
+                        value={analysis}
+                        theme="vs-dark"
+                        options={{
+                            minimap: { enabled: true },
+                            fontSize: 14,
+                            wordWrap: 'on',
+                            automaticLayout: true,
+                        }}
+                    />
                 ) : !loading ? (
                     <div className="flex items-center justify-center h-full text-gray-400">
                         Click "Analyze Code" to see a detailed analysis

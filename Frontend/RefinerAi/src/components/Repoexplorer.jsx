@@ -3,18 +3,13 @@ import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { getCorrectedCode } from '../utils/codeCorrector';
 import Editor from '@monaco-editor/react';
-
+import CodeAnalyser from './CodeAnalyser';
 const token = import.meta.env.VITE_GITHUB_TOKEN;
-console.log('GitHub token available:', !!token);
 
 const fetchContents = async (url, setError) => {
     try {
         const response = await axios.get(url, {
-            headers: {
-                'Authorization': `token ${token}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'X-GitHub-Api-Version': '2022-11-28'
-            }
+            headers: { Authorization: `token ${token}` },
         });
 
         const contents = response.data;
@@ -31,15 +26,8 @@ const fetchContents = async (url, setError) => {
 
         return allFiles;
     } catch (error) {
+        setError('Error fetching repository contents');
         console.error('Error fetching contents:', error);
-        if (error.response) {
-            const errorMessage = error.response.data?.message || error.response.statusText;
-            setError(`Error fetching repository contents: ${errorMessage}`);
-        } else if (error.request) {
-            setError('Network error while fetching repository contents');
-        } else {
-            setError(`Error fetching repository contents: ${error.message}`);
-        }
         return [];
     }
 };
@@ -118,30 +106,13 @@ const RepoViewer = () => {
         const [owner, repo] = extractOwnerAndRepo(repoUrl);
 
         try {
-            const response = await axios.get(
-                `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
-                {
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'X-GitHub-Api-Version': '2022-11-28'
-                    }
-                }
-            );
+            const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`);
             const decodedContent = atob(response.data.content);
             setFileContent(decodedContent);
             setSelectedFile(path);
             setCorrectedContent('');
         } catch (err) {
             console.error('Error fetching file content:', err);
-            if (err.response) {
-                const errorMessage = err.response.data?.message || err.response.statusText;
-                setError(`Error fetching file content: ${errorMessage}`);
-            } else if (err.request) {
-                setError('Network error while fetching file content');
-            } else {
-                setError(`Error fetching file content: ${err.message}`);
-            }
         } finally {
             setLoading(false);
         }
@@ -175,112 +146,46 @@ const RepoViewer = () => {
     };
 
     const handleCreateFile = async () => {
-        if (!newFileName) {
-            setError('Please enter a file name');
-            return;
-        }
+        if (!newFileName) return;
         
         const [owner, repo] = extractOwnerAndRepo(repoUrl);
-        if (!owner || !repo) {
-            setError('Invalid repository URL');
-            return;
-        }
-
         const path = currentPath ? `${currentPath}/${newFileName}` : newFileName;
         
         try {
-            // First verify the repository exists and we have access
-            try {
-                const repoResponse = await axios.get(
-                    `https://api.github.com/repos/${owner}/${repo}`,
-                    {
-                        headers: {
-                            'Authorization': `token ${token}`,
-                            'Accept': 'application/vnd.github.v3+json',
-                            'X-GitHub-Api-Version': '2022-11-28'
-                        }
-                    }
-                );
-                
-                if (!defaultBranch) {
-                    setDefaultBranch(repoResponse.data.default_branch);
+            const content = '';
+            const encodedContent = btoa(content);
+            
+            const response = await axios.get(
+                `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${defaultBranch}`,
+                {
+                    headers: { Authorization: `token ${token}` },
                 }
-            } catch (repoError) {
-                console.error('Repository access error:', repoError);
-                if (repoError.response?.status === 404) {
-                    setError('Repository not found. Please check the repository URL and your access permissions.');
-                } else if (repoError.response?.status === 401) {
-                    setError('Authentication failed. Please check your GitHub token.');
-                } else {
-                    setError('Failed to access repository. Please check your permissions.');
-                }
+            ).catch(() => ({ data: null })); // File doesn't exist yet
+
+            if (response.data) {
+                setError('File already exists');
                 return;
             }
-
-            // Create the file
-            const content = ''; // Empty file content
-            // Use btoa for base64 encoding, with proper UTF-8 handling
-            const encodedContent = btoa(unescape(encodeURIComponent(content)));
-
-            const createFileData = {
-                message: `Create ${path}`,
-                content: encodedContent,
-                branch: defaultBranch || 'main'
-            };
-
-            console.log('Creating file with data:', {
-                path,
-                branch: createFileData.branch,
-                contentLength: createFileData.content.length,
-                repoUrl: `${owner}/${repo}`
-            });
-
-            const createResponse = await axios.put(
+            
+            await axios.put(
                 `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
-                createFileData,
                 {
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Content-Type': 'application/json',
-                        'X-GitHub-Api-Version': '2022-11-28'
-                    }
+                    message: `Create ${path}`,
+                    content: encodedContent,
+                    branch: defaultBranch,
+                },
+                {
+                    headers: { Authorization: `token ${token}` },
                 }
             );
-
-            console.log('File creation response:', createResponse.status, createResponse.statusText);
-
-            if (createResponse.status === 201) {
-                console.log('File created successfully');
-                handleFetchRepo();
-                setShowNewFileDialog(false);
-                setNewFileName('');
-                addToPendingChanges('create', path);
-                setError(null);
-            } else {
-                throw new Error(`Unexpected response status: ${createResponse.status}`);
-            }
+            
+            handleFetchRepo();
+            setShowNewFileDialog(false);
+            setNewFileName('');
+            addToPendingChanges('create', path);
         } catch (error) {
             console.error('Error creating file:', error);
-            if (error.response) {
-                const errorMessage = error.response.data?.message || error.response.statusText;
-                console.log('Error response data:', error.response.data);
-                if (error.response.status === 404) {
-                    setError(`Repository or branch not found. Please check your permissions. Details: ${errorMessage}`);
-                } else if (error.response.status === 401) {
-                    setError(`Authentication failed. Please check your GitHub token. Details: ${errorMessage}`);
-                } else if (error.response.status === 422) {
-                    setError(`Invalid request. The file might already exist or there might be a problem with the content. Details: ${errorMessage}`);
-                } else if (error.response.status === 409) {
-                    setError(`Conflict error. The file might be locked or there might be a concurrent update. Details: ${errorMessage}`);
-                } else {
-                    setError(`GitHub API Error (${error.response.status}): ${errorMessage}`);
-                }
-            } else if (error.request) {
-                setError('Network error. Please check your connection.');
-            } else {
-                setError(`An unexpected error occurred: ${error.message}`);
-            }
+            setError('Failed to create file');
         }
     };
 
@@ -291,16 +196,12 @@ const RepoViewer = () => {
             const response = await axios.get(
                 `https://api.github.com/repos/${owner}/${repo}/contents/${selectedFile}?ref=${defaultBranch}`,
                 {
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'X-GitHub-Api-Version': '2022-11-28'
-                    }
+                    headers: { Authorization: `token ${token}` },
                 }
             );
             
             const sha = response.data.sha;
-            const encodedContent = btoa(unescape(encodeURIComponent(fileContent)));
+            const encodedContent = btoa(fileContent);
             
             await axios.put(
                 `https://api.github.com/repos/${owner}/${repo}/contents/${selectedFile}`,
@@ -311,12 +212,7 @@ const RepoViewer = () => {
                     branch: defaultBranch,
                 },
                 {
-                    headers: {
-                        'Authorization': `token ${token}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'Content-Type': 'application/json',
-                        'X-GitHub-Api-Version': '2022-11-28'
-                    }
+                    headers: { Authorization: `token ${token}` },
                 }
             );
             
@@ -324,14 +220,7 @@ const RepoViewer = () => {
             addToPendingChanges('modify', selectedFile);
         } catch (error) {
             console.error('Error saving file:', error);
-            if (error.response) {
-                const errorMessage = error.response.data?.message || error.response.statusText;
-                setError(`Failed to save file: ${errorMessage}`);
-            } else if (error.request) {
-                setError('Network error while saving file');
-            } else {
-                setError(`Error saving file: ${error.message}`);
-            }
+            setError('Failed to save file');
         }
     };
 
@@ -646,10 +535,10 @@ const RepoViewer = () => {
                                 {correctionLoading ? (
                                     <>
                                         <span className="inline-block animate-spin mr-2">⟳</span>
-                                        Correcting...
+                                        Analyzing...
                                     </>
                                 ) : (
-                                    'Correct Code'
+                                    'Analyze Code'
                                 )}
                             </button>
                         </div>
@@ -662,12 +551,9 @@ const RepoViewer = () => {
                     </div>
                 ) : selectedFile ? (
                     <div className="flex-1 flex">
-                        <div style={{ flex: 1, height: '100%', borderRight: '1px solid #333' }}>
-                            <div className="px-4 py-2 bg-[#252526] border-b border-[#333]">
-                                <h3 className="text-[#61dafb]">Original Code</h3>
-                            </div>
+                        <div style={{ flex: 1, height: '100%' }}>
                             <Editor
-                                height="calc(100% - 41px)"
+                                height="100%"
                                 defaultLanguage={detectLanguage(selectedFile)}
                                 value={fileContent}
                                 onChange={(value) => {
@@ -683,42 +569,17 @@ const RepoViewer = () => {
                                 }}
                             />
                         </div>
-                        <div style={{ flex: 1, height: '100%' }}>
-                            <div className="px-4 py-2 bg-[#252526] border-b border-[#333] flex justify-between items-center">
-                                <h3 className="text-[#61dafb]">Corrected Code</h3>
-                                {correctionLoading && (
-                                    <span className="text-sm text-gray-400">Correcting...</span>
-                                )}
-                            </div>
-                            {correctionLoading ? (
-                                <div className="flex items-center justify-center h-[calc(100%-41px)] bg-[#1e1e1e]">
-                                    <div className="flex flex-col items-center">
-                                        <div className="animate-spin text-2xl mb-2">⟳</div>
-                                        <p className="text-gray-400">Analyzing and correcting code...</p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <Editor
-                                    height="calc(100% - 41px)"
-                                    defaultLanguage={detectLanguage(selectedFile)}
-                                    value={correctedContent || 'Click "Correct Code" to see suggestions'}
-                                    theme="vs-dark"
-                                    options={{
-                                        readOnly: true,
-                                        minimap: { enabled: true },
-                                        fontSize: 14,
-                                        wordWrap: 'on',
-                                        automaticLayout: true,
-                                    }}
-                                />
-                            )}
-                        </div>
                     </div>
                 ) : (
                     <div className="flex-1 flex items-center justify-center text-gray-400">
                         Select a file to edit
                     </div>
                 )}
+            </div>
+
+            {/* Code Analyzer Panel */}
+            <div style={{ width: '400px', borderLeft: '1px solid #333', height: '100%', overflow: 'auto' }}>
+                <CodeAnalyser code={fileContent} language={selectedFile ? detectLanguage(selectedFile) : 'plaintext'} />
             </div>
 
             {/* New File Dialog */}
