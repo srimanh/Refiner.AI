@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { getCorrectedCode } from '../utils/codeCorrector';
 import Editor from '@monaco-editor/react';
-
+import CodeAnalyser from './CodeAnalyser';
 const token = import.meta.env.VITE_GITHUB_TOKEN;
 
 const fetchContents = async (url, setError) => {
@@ -535,10 +535,10 @@ const RepoViewer = () => {
                                 {correctionLoading ? (
                                     <>
                                         <span className="inline-block animate-spin mr-2">⟳</span>
-                                        Correcting...
+                                        Analyzing...
                                     </>
                                 ) : (
-                                    'Correct Code'
+                                    'Analyze Code'
                                 )}
                             </button>
                         </div>
@@ -551,12 +551,9 @@ const RepoViewer = () => {
                     </div>
                 ) : selectedFile ? (
                     <div className="flex-1 flex">
-                        <div style={{ flex: 1, height: '100%', borderRight: '1px solid #333' }}>
-                            <div className="px-4 py-2 bg-[#252526] border-b border-[#333]">
-                                <h3 className="text-[#61dafb]">Original Code</h3>
-                            </div>
+                        <div style={{ flex: 1, height: '100%' }}>
                             <Editor
-                                height="calc(100% - 41px)"
+                                height="100%"
                                 defaultLanguage={detectLanguage(selectedFile)}
                                 value={fileContent}
                                 onChange={(value) => {
@@ -572,42 +569,17 @@ const RepoViewer = () => {
                                 }}
                             />
                         </div>
-                        <div style={{ flex: 1, height: '100%' }}>
-                            <div className="px-4 py-2 bg-[#252526] border-b border-[#333] flex justify-between items-center">
-                                <h3 className="text-[#61dafb]">Corrected Code</h3>
-                                {correctionLoading && (
-                                    <span className="text-sm text-gray-400">Correcting...</span>
-                                )}
-                            </div>
-                            {correctionLoading ? (
-                                <div className="flex items-center justify-center h-[calc(100%-41px)] bg-[#1e1e1e]">
-                                    <div className="flex flex-col items-center">
-                                        <div className="animate-spin text-2xl mb-2">⟳</div>
-                                        <p className="text-gray-400">Analyzing and correcting code...</p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <Editor
-                                    height="calc(100% - 41px)"
-                                    defaultLanguage={detectLanguage(selectedFile)}
-                                    value={correctedContent || 'Click "Correct Code" to see suggestions'}
-                                    theme="vs-dark"
-                                    options={{
-                                        readOnly: true,
-                                        minimap: { enabled: true },
-                                        fontSize: 14,
-                                        wordWrap: 'on',
-                                        automaticLayout: true,
-                                    }}
-                                />
-                            )}
-                        </div>
                     </div>
                 ) : (
                     <div className="flex-1 flex items-center justify-center text-gray-400">
                         Select a file to edit
                     </div>
                 )}
+            </div>
+
+            {/* Code Analyzer Panel */}
+            <div style={{ width: '400px', borderLeft: '1px solid #333', height: '100%', overflow: 'auto' }}>
+                <CodeAnalyser code={fileContent} language={selectedFile ? detectLanguage(selectedFile) : 'plaintext'} />
             </div>
 
             {/* New File Dialog */}
