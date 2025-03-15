@@ -100,7 +100,7 @@ function Auth() {
     sessionStorage.setItem("githubOAuthState", state);
 
     window.location.assign(
-      `https://github.com/login/oauth/authorize?client_id=${client_id}&scope=user&state=${state}&redirect_uri=https://refinerai-1.onrender.com/auth`
+      `https://github.com/login/oauth/authorize?client_id=${client_id}&scope=user&state=${state}&redirect_uri=http://localhost:5173/auth`
     );
   }
 
