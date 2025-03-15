@@ -13,101 +13,82 @@ const model = new ChatGoogleGenerativeAI({
 
 // const parser = new JsonOutputParser();
 
-export async function analyzeCode(fileContent,file_name) {
-    // Convert fileContent to a string to ensure correct interpolation
+export async function analyzeCode(fileContent, fileName = 'untitled') {
     const safeContent = String(fileContent);
 
-    const prompt = `You are CodeEd Assistant, an educational code improvement tool for React developers. Analyze this React code to help the developer improve their skills.
+    const prompt = `You are CodeEd Assistant, an educational code improvement tool for React developers. 
+    Analyze this React code and provide a detailed analysis in markdown format.
 
-                    FILE: ${file_name}
+    FILE: ${fileName}
 
-                    CODE:
-                    \`\`\`
-                    ${safeContent}
-                    \`\`\`
+    CODE:
+    \`\`\`
+    ${safeContent}
+    \`\`\`
 
-                    Please provide:
+    Provide your analysis in the following format using markdown:
 
-                    1. PURPOSE IDENTIFICATION
-                    - Identify the primary purpose of this component/file
-                    - Note the main React concepts being used
+    # Code Analysis Report
 
-                    
-                    2. Provide a structured analysis with these sections:
-                    a) Code Quality Assessment (1-5 scale with explanation)
-                    b) React Best Practices Review
-                    c) Performance Considerations
-                    d) Accessibility Concerns
-                    e) Modern React Patterns that could be applied
-                    
-                    3. DETAILED ANALYSIS
-                    For each issue or improvement opportunity:
-                    a) WHAT: Clearly describe what could be improved
-                    b) WHY: Explain the underlying React concepts and why this matters
-                    c) HOW: Provide a specific code example showing the improvement
-                    d) INDUSTRY CONTEXT: Connect this to professional development standards
+    ## Purpose and Overview
+    [Describe the primary purpose of the component/file and main React concepts used]
 
-                    4. KEY AREAS TO COVER:
-                    - Component structure and organization
-                    - State management approaches
-                    - Props handling and validation
-                    - Performance optimization
-                    - React hooks usage
-                    - JSX best practices
-                    - Accessibility considerations
-                    - Modern React patterns
+    ## Code Quality Assessment
+    - Score: [1-5]
+    - Explanation: [Why this score was given]
 
-                    5. LEARNING RESOURCES
-                    Suggest 3 specific resources (articles, documentation, videos) that address the main improvement areas identified.
-                    
-                    RESPONSE FORMAT:
-                    - Use markdown formatting
-                    - Highlight code snippets appropriately
-                    - Keep explanations clear and accessible
-                    - Balance depth of analysis with approachability`
+    ### Strengths
+    - [List strengths]
 
-    // Construct a more specific prompt that asks for JSON response
-    // const prompt = `
-    // Please analyze and correct the following code, focusing on syntax errors, best practices, and potential improvements.
-    // Return the response in the following JSON format:
-    // {
-    //     "code": "the corrected code here"
-    // }
+    ### Areas for Improvement
+    - [List areas needing improvement]
 
-    // Here's the code to analyze:
-    // \`\`\`
-    // ${safeContent}
-    // \`\`\`
-    // `;
+    ## React Best Practices
+    ### Followed
+    - [List practices followed]
+
+    ### Missing
+    - [List practices that should be implemented]
+
+    ## Performance Considerations
+    - [List performance issues and recommendations]
+
+    ## Accessibility
+    - [List accessibility concerns and improvements]
+
+    ## Modern React Patterns
+    - [List patterns that could be applied]
+
+    ## Detailed Recommendations
+    [For each major issue:]
+    1. **Issue**: [Description]
+    - Why it matters: [Explanation]
+    - How to fix: [Code example]
+    - Industry context: [Best practices context]
+
+    ## Learning Resources
+    1. [Resource name](url) - [Why it's relevant]
+    2. [Resource name](url) - [Why it's relevant]
+    3. [Resource name](url) - [Why it's relevant]
+
+    ## Conclusion
+    [Summary of key points and main recommendations]
+
+    Make sure to:
+    1. Use proper markdown formatting
+    2. Include code examples where relevant
+    3. Be specific and actionable in recommendations
+    4. Keep explanations clear and educational`;
 
     try {
         const response = await model.call([{ role: "user", content: prompt }]);
         
-        // Try to parse the response text as JSON
-        try {
-            // First, try to find JSON in the response
-            // const jsonMatch = response.text.match(/\{[\s\S]*\}/);
-            // if (jsonMatch) {
-            //     const jsonStr = jsonMatch[0];
-            //     const parsed = JSON.parse(jsonStr);
-            //     if (parsed && parsed.code) {
-            //         return parsed;
-            //     }
-            // }
-            
-            // If no valid JSON found, wrap the entire response in a code property
-            return {
-                analysis: response.text.trim()
-            };
-        } catch (parseError) {
-            // If JSON parsing fails, return the raw text as code
-            return {
-                code: response.text.trim()
-            };
-        }
+        return {
+            analysis: response.text.trim()
+        };
     } catch (error) {
-        console.error("Error in getCorrectedCode:", error);
-        throw new Error("Failed to get corrected code: " + error.message);
+        console.error("Error in analyzeCode:", error);
+        throw new Error("Failed to analyze code: " + error.message);
     }
 }
 
