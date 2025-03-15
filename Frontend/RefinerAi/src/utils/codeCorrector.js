@@ -7,7 +7,7 @@ import dotenv from "dotenv";
 // dotenv.config();
 // import.meta.env.
 const model = new ChatGoogleGenerativeAI({
-    modelName: "gemini-1.5-flash-latest",
+    modelName: "gemini-2.0-flash",
     apiKey: import.meta.env.VITE_GEMINI_API_KEY,
 });
 
@@ -17,16 +17,48 @@ export async function getCorrectedCode(fileContent) {
     // Convert fileContent to a string to ensure correct interpolation
     const safeContent = String(fileContent);
 
-    // Construct the prompt
-    const prompt = `I have the following code:\n${safeContent}\nI want you to correct the syntax. Return the corrected code in JSON format.`;
+    // Construct a more specific prompt that asks for JSON response
+    const prompt = `
+    Please analyze and correct the following code, focusing on syntax errors, best practices, and potential improvements.
+    Return the response in the following JSON format:
+    {
+        "code": "the corrected code here"
+    }
+
+    Here's the code to analyze:
+    \`\`\`
+    ${safeContent}
+    \`\`\`
+    `;
 
     try {
         const response = await model.call([{ role: "user", content: prompt }]);
-        const correctedCode = await parser.parse(response.text); 
-        return correctedCode; // Return the corrected code
+        
+        // Try to parse the response text as JSON
+        try {
+            // First, try to find JSON in the response
+            const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                const jsonStr = jsonMatch[0];
+                const parsed = JSON.parse(jsonStr);
+                if (parsed && parsed.code) {
+                    return parsed;
+                }
+            }
+            
+            // If no valid JSON found, wrap the entire response in a code property
+            return {
+                code: response.text.trim()
+            };
+        } catch (parseError) {
+            // If JSON parsing fails, return the raw text as code
+            return {
+                code: response.text.trim()
+            };
+        }
     } catch (error) {
         console.error("Error in getCorrectedCode:", error);
-        return "Error in getting corrected code.";
+        throw new Error("Failed to get corrected code: " + error.message);
     }
 }
 
