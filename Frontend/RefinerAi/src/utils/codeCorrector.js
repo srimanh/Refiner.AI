@@ -22,7 +22,12 @@ export async function getCorrectedCode(fileContent) {
     Please analyze and correct the following code, focusing on syntax errors, best practices, and potential improvements.
     Return the response in the following JSON format:
     {
-        "code": "the corrected code here"
+        "code": "the corrected code here",
+        "analysis": "A detailed analysis of the code, including:
+        1. Main concepts and patterns used
+        2. Potential improvements
+        3. Best practices demonstrated
+        4. Areas for learning and practice"
     }
 
     Here's the code to analyze:
@@ -48,12 +53,14 @@ export async function getCorrectedCode(fileContent) {
             
             // If no valid JSON found, wrap the entire response in a code property
             return {
-                code: response.text.trim()
+                code: response.text.trim(),
+                analysis: "Code analysis not available in the expected format."
             };
         } catch (parseError) {
             // If JSON parsing fails, return the raw text as code
             return {
-                code: response.text.trim()
+                code: response.text.trim(),
+                analysis: "Code analysis not available in the expected format."
             };
         }
     } catch (error) {

@@ -5,6 +5,7 @@ import { getCorrectedCode } from '../utils/codeCorrector';
 import Editor from '@monaco-editor/react';
 import CodeAnalyser from './CodeAnalyser';
 import Header from '../components/header'
+import PracticeCode from './PracticeCode';
 const token = import.meta.env.VITE_GITHUB_TOKEN;
 
 const fetchContents = async (url, setError) => {
@@ -60,6 +61,8 @@ const RepoViewer = () => {
     const [dragStartX, setDragStartX] = useState(0);
     const [dragStartWidth, setDragStartWidth] = useState(0);
     const [dragType, setDragType] = useState(null);
+    const [activeRightPanel, setActiveRightPanel] = useState('analyzer');
+    const [codeAnalysis, setCodeAnalysis] = useState(null);
 
     useEffect(() => {
         if (repoUrl) {
@@ -153,8 +156,14 @@ const RepoViewer = () => {
             const corrected = await getCorrectedCode(fileContent);
             console.log('Corrected code response:', corrected);
             
-            if (corrected && typeof corrected === 'object' && corrected.code) {
-                setCorrectedContent(corrected.code);
+            if (corrected && typeof corrected === 'object') {
+                if (corrected.code) {
+                    setCorrectedContent(corrected.code);
+                }
+                // Store the analysis for practice problems
+                if (corrected.analysis) {
+                    setCodeAnalysis(corrected.analysis);
+                }
             } else {
                 throw new Error('Invalid response format from code correction');
             }
@@ -162,6 +171,7 @@ const RepoViewer = () => {
             console.error('Error correcting code:', error);
             setError('Error correcting code: ' + (error.message || 'Unknown error'));
             setCorrectedContent('');
+            setCodeAnalysis(null);
         } finally {
             setCorrectionLoading(false);
         }
@@ -712,7 +722,39 @@ const RepoViewer = () => {
                     userSelect: isDragging ? 'none' : 'auto',
                     background: '#000000'
                 }}>
-                    <CodeAnalyser code={fileContent} language={selectedFile ? detectLanguage(selectedFile) : 'plaintext'} />
+                    <div className="flex flex-col h-full">
+                        <div className="p-4 border-b border-[#333] flex justify-between items-center">
+                            <div className="flex space-x-4">
+                                <button
+                                    onClick={() => setActiveRightPanel('analyzer')}
+                                    className={`px-4 py-2 rounded ${
+                                        activeRightPanel === 'analyzer'
+                                            ? 'bg-[#0078d4]'
+                                            : 'bg-[#333] hover:bg-[#444]'
+                                    }`}
+                                >
+                                    Code Analysis
+                                </button>
+                                <button
+                                    onClick={() => setActiveRightPanel('practice')}
+                                    className={`px-4 py-2 rounded ${
+                                        activeRightPanel === 'practice'
+                                            ? 'bg-[#0078d4]'
+                                            : 'bg-[#333] hover:bg-[#444]'
+                                    }`}
+                                >
+                                    Practice Code
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-auto">
+                            {activeRightPanel === 'analyzer' ? (
+                                <CodeAnalyser code={fileContent} language={selectedFile ? detectLanguage(selectedFile) : 'plaintext'} />
+                            ) : (
+                                <PracticeCode codeAnalysis={codeAnalysis} />
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* New File Dialog */}
