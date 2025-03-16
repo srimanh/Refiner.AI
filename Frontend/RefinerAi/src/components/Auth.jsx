@@ -34,7 +34,7 @@ function Auth() {
 
       async function getAccessToken() {
         try {
-          const response = await fetch(`https://refiner-ai.onrender.com/getAccessToken?code=${codeParam}&state=${stateParam}`);
+          const response = await fetch(`${backend_url}/getAccessToken?code=${codeParam}&state=${stateParam}`);
           const data = await response.json();
 
           console.log("Access Token Data:", data);
@@ -100,7 +100,7 @@ function Auth() {
     sessionStorage.setItem("githubOAuthState", state);
 
     window.location.assign(
-      `https://github.com/login/oauth/authorize?client_id=${client_id}&scope=user&state=${state}&redirect_uri=https://refiner-ai-261v.vercel.app/auth`
+      `https://github.com/login/oauth/authorize?client_id=${client_id}&scope=user&state=${state}&redirect_uri=http://localhost:5173/auth`
     );
   }
 
