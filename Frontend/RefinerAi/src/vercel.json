@@ -1,0 +1,9 @@
+{
+    "rewrites": [
+      { "source": "/auth", "destination": "/" },
+      { "source": "/dashboard", "destination": "/" },
+      { "source": "/repoviewer", "destination": "/" },
+      { "source": "/(.*)", "destination": "/" }
+    ]
+  }
+  
