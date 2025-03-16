@@ -34,7 +34,7 @@ function Auth() {
 
       async function getAccessToken() {
         try {
-          const response = await fetch(`${backend_url}/getAccessToken?code=${codeParam}&state=${stateParam}`);
+          const response = await fetch(`https://refiner-ai.onrender.com/getAccessToken?code=${codeParam}&state=${stateParam}`);
           const data = await response.json();
 
           console.log("Access Token Data:", data);
