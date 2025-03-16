@@ -4,6 +4,7 @@ import { generateQuiz } from '../utils/quizGenerator';
 import { generateCodePractice } from '../utils/codePractice';
 import { resultCode } from '../utils/codeResult';
 import Editor from '@monaco-editor/react';
+import Chatbot from './Chatbot';
 
 function CodeAnalyser({ code, language = 'javascript' }) {
     const [analysis, setAnalysis] = useState(null);
@@ -13,6 +14,7 @@ function CodeAnalyser({ code, language = 'javascript' }) {
     const [practiceProblem, setPracticeProblem] = useState(null);
     const [userSolution, setUserSolution] = useState('');
     const [showQuiz, setShowQuiz] = useState(false);
+    const [showChatbox, setShowChatbox] = useState(false);
     const [showPractice, setShowPractice] = useState(false);
     const [selectedAnswers, setSelectedAnswers] = useState({});
     const [showAnswers, setShowAnswers] = useState(false);
@@ -84,6 +86,7 @@ function CodeAnalyser({ code, language = 'javascript' }) {
             }
             setShowQuiz(true);
             setShowPractice(false);
+            setShowChatbox(false);
             setSelectedAnswers({});
             setShowAnswers(false);
         } else if (view === 'practice') {
@@ -93,9 +96,15 @@ function CodeAnalyser({ code, language = 'javascript' }) {
             }
             setShowQuiz(false);
             setShowPractice(true);
+            setShowChatbox(false);
+        } else if (view === 'chat') {
+            setShowQuiz(false);
+            setShowPractice(false);
+            setShowChatbox(true);
         } else {
             setShowQuiz(false);
             setShowPractice(false);
+            setShowChatbox(false);
         }
     };
 
@@ -163,39 +172,52 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                             className={`px-4 h-9 flex items-center text-sm transition-colors relative ${
                                 !analysis || loading
                                     ? 'bg-[#2d2d2d] text-[#6d6d6d] cursor-not-allowed'
-                                    : !showQuiz && !showPractice
+                                    : !showQuiz && !showPractice && !showChatbox
                                         ? 'bg-[#1e1e1e] text-white'
                                         : 'bg-[#2d2d2d] text-[#969696] hover:text-white'
-                            } ${!showQuiz && !showPractice ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:bg-[#0078d4]' : ''}`}
+                            } ${!showQuiz && !showPractice && !showChatbox ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:bg-[#0078d4]' : ''}`}
                         >
                             Analysis
                         </button>
-                    <button
-                        onClick={() => toggleView('quiz')}
-                        disabled={!analysis || loading}
+                        <button
+                            onClick={() => toggleView('quiz')}
+                            disabled={!analysis || loading}
                             className={`px-4 h-9 flex items-center text-sm transition-colors relative ${
-                            !analysis || loading
+                                !analysis || loading
                                     ? 'bg-[#2d2d2d] text-[#6d6d6d] cursor-not-allowed'
-                                : showQuiz
+                                    : showQuiz
                                         ? 'bg-[#1e1e1e] text-white'
                                         : 'bg-[#2d2d2d] text-[#969696] hover:text-white'
                             } ${showQuiz ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:bg-[#0078d4]' : ''}`}
                         >
                             Quiz
-                    </button>
-                    <button
-                        onClick={() => toggleView('practice')}
-                        disabled={!analysis || loading}
+                        </button>
+                        <button
+                            onClick={() => toggleView('chat')}
+                            disabled={!analysis || loading}
                             className={`px-4 h-9 flex items-center text-sm transition-colors relative ${
-                            !analysis || loading
+                                !analysis || loading
                                     ? 'bg-[#2d2d2d] text-[#6d6d6d] cursor-not-allowed'
-                                : showPractice
+                                    : showChatbox
+                                        ? 'bg-[#1e1e1e] text-white'
+                                        : 'bg-[#2d2d2d] text-[#969696] hover:text-white'
+                            } ${showChatbox ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:bg-[#0078d4]' : ''}`}
+                        >
+                            Bot
+                        </button>
+                        <button
+                            onClick={() => toggleView('practice')}
+                            disabled={!analysis || loading}
+                            className={`px-4 h-9 flex items-center text-sm transition-colors relative ${
+                                !analysis || loading
+                                    ? 'bg-[#2d2d2d] text-[#6d6d6d] cursor-not-allowed'
+                                    : showPractice
                                         ? 'bg-[#1e1e1e] text-white'
                                         : 'bg-[#2d2d2d] text-[#969696] hover:text-white'
                             } ${showPractice ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:bg-[#0078d4]' : ''}`}
                         >
                             Practice
-                    </button>
+                        </button>
                     </div>
                     <div className="flex-1"></div>
                     <button
@@ -226,7 +248,7 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                     </div>
                 )}
 
-                {analysis && !showQuiz && !showPractice && (
+                {analysis && !showQuiz && !showPractice && !showChatbox && (
                     <div className="p-6 space-y-8">
                         {/* Executive Summary */}
                         <div className="bg-[#ffffff08] p-4 rounded">
@@ -476,6 +498,11 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                                 )}
                                 </div>
                         </div>
+                    </div>
+                )}
+                {showChatbox && analysis && (
+                    <div className="h-full">
+                        <Chatbot analysisContent={analysis} />
                     </div>
                 )}
 
