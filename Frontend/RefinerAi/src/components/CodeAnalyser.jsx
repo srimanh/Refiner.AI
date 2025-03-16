@@ -502,7 +502,7 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                 )}
                 {showChatbox && analysis && (
                     <div className="h-full">
-                        <Chatbot analysisContent={analysis} />
+                        <Chatbot code={code} analysisContent={analysis} />
                     </div>
                 )}
 

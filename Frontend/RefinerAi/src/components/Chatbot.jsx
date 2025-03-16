@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { generateChatbot } from '../utils/codeChatbox';
 
-function Chatbot({ analysisContent }) {
+function Chatbot({ code, analysisContent }) {
   const [chatHistory, setChatHistory] = useState([]);
   const [userMessage, setUserMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -39,7 +39,7 @@ function Chatbot({ analysisContent }) {
     setError(null);
 
     try {
-      const response = await generateChatbot(analysisContent, [...chatHistory, newMessage]);
+      const response = await generateChatbot(code, analysisContent, [...chatHistory, newMessage]);
       setChatHistory(prev => [...prev, { role: 'assistant', content: response }]);
     } catch (err) {
       setError(err.message);
