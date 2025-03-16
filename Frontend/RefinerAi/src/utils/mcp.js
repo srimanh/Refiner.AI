@@ -362,6 +362,9 @@ class ModelContextProtocol {
             - DO NOT attribute responsibilities to the component that are handled by imported utilities or managers
 
             2. FUNDAMENTAL CONCEPT EVALUATION (Be exhaustively detailed)
+
+            IMPORTANT: By default consider the given concepts and add anything else if needed.
+
             - Component Architecture
                 * Assess component composition, reusability, and separation of concerns
                 * Evaluate prop usage, typing, and validation practices
@@ -392,6 +395,38 @@ class ModelContextProtocol {
                 * Evaluate how the component interacts with external utilities (socket managers, API clients, etc.)
                 * Assess whether the component correctly leverages external utilities' responsibilities
                 * Focus on the component's usage of external services rather than the implementation of those services
+            
+            - Naming Conventions
+              * Evaluate consistency and clarity of component, prop, state, and function names
+              * Assess adherence to established React naming practices (PascalCase for components, camelCase for variables/functions)
+              * Identify naming that fails to communicate purpose, intent, or relationship between elements
+              * Examine prefix/suffix usage for related component families or specialized functions
+                
+              
+            Consider the following code quality guidelines as well:
+            1. DRY principle (Don't repeat yourself)
+            2. Break code into small, focused files (Component-ization)
+            3. Organize CSS files together
+            4. Avoid inline CSS (create classes for 2+ CSS properties)
+            5. Use linters for consistent code
+            6. Review before pull requests
+            7. Small functions with single responsibilities
+            8. Create utility files to remove duplicate code
+            9. Separate service calls (module_name.service.js)
+            10. Logical file naming
+            11. Self-commenting code (good variable/function names)
+            12. Write test cases
+            13. Destructure props for cleaner code
+            14. Use useReducer for complex state
+            15. Organize imports in this order:
+                a. React imports
+                b. Library imports (alphabetical)
+                c. Absolute project imports (alphabetical)
+                d. Relative imports (alphabetical)
+                e. Import * as
+                f. Import file extensions
+            16. Use index.js for exports
+
 
             3. KNOWLEDGE GAP ANALYSIS
             For each issue identified, perform this multi-level analysis:
