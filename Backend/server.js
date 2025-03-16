@@ -39,8 +39,7 @@ app.get('/getAccessToken', async (req, res) => {
           client_id: CLIENT_ID,
           client_secret: CLIENT_SECRET,
           code: requestToken,
-          // redirect_uri: "https://refinerai-1.onrender.com",
-          redirect_uri: "https://refiner-ai-261v.vercel.app/"
+          redirect_uri: "https://refiner-ai-261v.vercel.app/auth"
         })
       });      
     
