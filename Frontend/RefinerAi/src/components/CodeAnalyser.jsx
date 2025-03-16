@@ -153,56 +153,58 @@ function CodeAnalyser({ code, language = 'javascript' }) {
     };
 
     return (
-        <div className="flex flex-col h-full bg-black text-white">
-            <div className="p-4 border-b border-[#333] flex justify-between items-center">
-                <h2 className="text-xl text-[#61dafb]">Code Analysis</h2>
-                <div className="flex space-x-4">
+        <div className="flex flex-col h-full bg-[#1e1e1e] text-white">
+            <div className="flex flex-col">
+                <div className="flex items-center px-2 bg-[#252526]">
+                    <div className="flex space-x-[1px]">
+                        <button
+                            onClick={() => toggleView('analysis')}
+                            disabled={!analysis || loading}
+                            className={`px-4 h-9 flex items-center text-sm transition-colors relative ${
+                                !analysis || loading
+                                    ? 'bg-[#2d2d2d] text-[#6d6d6d] cursor-not-allowed'
+                                    : !showQuiz && !showPractice
+                                        ? 'bg-[#1e1e1e] text-white'
+                                        : 'bg-[#2d2d2d] text-[#969696] hover:text-white'
+                            } ${!showQuiz && !showPractice ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:bg-[#0078d4]' : ''}`}
+                        >
+                            Analysis
+                        </button>
                     <button
                         onClick={() => toggleView('quiz')}
                         disabled={!analysis || loading}
-                        className={`px-4 py-2 rounded ${
+                            className={`px-4 h-9 flex items-center text-sm transition-colors relative ${
                             !analysis || loading
-                                ? 'bg-[#333] opacity-50 cursor-not-allowed'
+                                    ? 'bg-[#2d2d2d] text-[#6d6d6d] cursor-not-allowed'
                                 : showQuiz
-                                    ? 'bg-[#0078d4]'
-                                    : 'bg-[#61dafb] hover:bg-[#70e4ff] cursor-pointer'
-                        }`}
-                    >
-                        Take Quiz
+                                        ? 'bg-[#1e1e1e] text-white'
+                                        : 'bg-[#2d2d2d] text-[#969696] hover:text-white'
+                            } ${showQuiz ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:bg-[#0078d4]' : ''}`}
+                        >
+                            Quiz
                     </button>
                     <button
                         onClick={() => toggleView('practice')}
                         disabled={!analysis || loading}
-                        className={`px-4 py-2 rounded ${
+                            className={`px-4 h-9 flex items-center text-sm transition-colors relative ${
                             !analysis || loading
-                                ? 'bg-[#333] opacity-50 cursor-not-allowed'
+                                    ? 'bg-[#2d2d2d] text-[#6d6d6d] cursor-not-allowed'
                                 : showPractice
-                                    ? 'bg-[#0078d4]'
-                                    : 'bg-[#61dafb] hover:bg-[#70e4ff] cursor-pointer'
-                        }`}
-                    >
-                        Practice Code
+                                        ? 'bg-[#1e1e1e] text-white'
+                                        : 'bg-[#2d2d2d] text-[#969696] hover:text-white'
+                            } ${showPractice ? 'after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[1px] after:bg-[#0078d4]' : ''}`}
+                        >
+                            Practice
                     </button>
-                    <button
-                        onClick={() => toggleView('analysis')}
-                        disabled={!analysis || loading}
-                        className={`px-4 py-2 rounded ${
-                            !analysis || loading
-                                ? 'bg-[#333] opacity-50 cursor-not-allowed'
-                                : !showQuiz && !showPractice
-                                    ? 'bg-[#0078d4]'
-                                    : 'bg-[#61dafb] hover:bg-[#70e4ff] cursor-pointer'
-                        }`}
-                    >
-                        Show Analysis
-                    </button>
+                    </div>
+                    <div className="flex-1"></div>
                     <button
                         onClick={handleAnalyze}
                         disabled={loading}
-                        className={`px-4 py-2 rounded ${
+                        className={`px-3 py-1 my-1 rounded-sm text-sm transition-colors ${
                             loading
-                                ? 'bg-[#333] opacity-50 cursor-not-allowed'
-                                : 'bg-[#0078d4] hover:bg-[#0086ef] cursor-pointer'
+                                ? 'bg-[#2d2d2d] text-[#6d6d6d] cursor-not-allowed'
+                                : 'bg-[#0078d4] text-white hover:bg-[#0086ef]'
                         }`}
                     >
                         {loading ? (
@@ -368,8 +370,8 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                                 <div key={index} className="bg-[#ffffff08] p-4 rounded">
                                     <div className="flex justify-between items-start mb-4">
                                         <h3 className="text-lg text-white flex-1">
-                                            {index + 1}. {quiz.question}
-                                        </h3>
+                                        {index + 1}. {quiz.question}
+                                    </h3>
                                         <div className="flex items-center space-x-3 ml-4">
                                             <span className={`px-2 py-1 rounded text-sm ${
                                                 quiz.difficulty === 'hard' ? 'bg-red-500/20 text-red-400' :
@@ -425,10 +427,10 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                                                         {selectedAnswers[index] === quiz.correctAnswer ? '✓' : '✗'}
                                                     </span>
                                                     <p className="font-semibold text-gray-200">
-                                                        {selectedAnswers[index] === quiz.correctAnswer
+                                                    {selectedAnswers[index] === quiz.correctAnswer
                                                             ? 'Correct!'
                                                             : `Incorrect. The correct answer is: ${quiz.correctAnswer}`}
-                                                    </p>
+                                                </p>
                                                 </div>
                                                 <p className="text-gray-300">
                                                     {quiz.explanation}
@@ -464,7 +466,7 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                                         : `${Object.keys(selectedAnswers).length}/${quizzes.length} questions answered`
                                     }
                                 </div>
-                                {!showAnswers && Object.keys(selectedAnswers).length > 0 && (
+                            {!showAnswers && Object.keys(selectedAnswers).length > 0 && (
                                     <button
                                         onClick={() => setShowAnswers(true)}
                                         className="px-4 py-2 bg-[#0078d4] hover:bg-[#0086ef] rounded transition-colors"
@@ -472,7 +474,7 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                                         Check Answers
                                     </button>
                                 )}
-                            </div>
+                                </div>
                         </div>
                     </div>
                 )}

@@ -63,6 +63,7 @@ const RepoViewer = () => {
     const [dragType, setDragType] = useState(null);
     const [activeRightPanel, setActiveRightPanel] = useState('analyzer');
     const [codeAnalysis, setCodeAnalysis] = useState(null);
+    const [editorInstance, setEditorInstance] = useState(null);
 
     useEffect(() => {
         if (repoUrl) {
@@ -76,6 +77,7 @@ const RepoViewer = () => {
         return match ? [match[1], match[2]] : [null, null];
     };
     const handleEditorDidMount = (editor, monaco) => {
+        setEditorInstance(editor);
         monaco.editor.defineTheme('black-theme', {
             base: 'vs-dark',
             inherit: true,
@@ -518,11 +520,69 @@ const RepoViewer = () => {
             const newWidth = Math.max(200, Math.min(600, dragStartWidth - diff));
             setCodeAnalyzerWidth(newWidth);
         }
+
+        // Update editor layout during resize
+        if (editorInstance) {
+            // Force immediate layout update
+            requestAnimationFrame(() => {
+                const editorContainer = document.querySelector('.monaco-editor-container');
+                if (editorContainer) {
+                    const rect = editorContainer.getBoundingClientRect();
+                    editorInstance.layout({
+                        width: rect.width,
+                        height: rect.height
+                    });
+                }
+            });
+        }
     };
 
     const handleResizeEnd = () => {
         setIsDragging(false);
+        if (editorInstance) {
+            // Force multiple layout updates to ensure proper rendering
+            const editorContainer = document.querySelector('.monaco-editor-container');
+            if (editorContainer) {
+                const rect = editorContainer.getBoundingClientRect();
+                editorInstance.layout({
+                    width: rect.width,
+                    height: rect.height
+                });
+
+                // Additional layout updates to ensure minimap positioning
+                setTimeout(() => {
+                    editorInstance.layout({
+                        width: rect.width,
+                        height: rect.height
+                    });
+                }, 50);
+            }
+        }
     };
+
+    // Add a resize observer to handle container size changes
+    useEffect(() => {
+        if (editorInstance) {
+            const resizeObserver = new ResizeObserver((entries) => {
+                for (const entry of entries) {
+                    const { width, height } = entry.contentRect;
+                    editorInstance.layout({
+                        width,
+                        height
+                    });
+                }
+            });
+
+            const editorContainer = document.querySelector('.monaco-editor-container');
+            if (editorContainer) {
+                resizeObserver.observe(editorContainer);
+            }
+
+            return () => {
+                resizeObserver.disconnect();
+            };
+        }
+    }, [editorInstance]);
 
     // Add useEffect for global event listeners
     useEffect(() => {
@@ -536,8 +596,6 @@ const RepoViewer = () => {
             window.removeEventListener('mouseup', handleResizeEnd);
         };
     }, [isDragging, dragStartX, dragStartWidth, dragType]);
-
-    
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#000000' }}>
@@ -633,32 +691,6 @@ const RepoViewer = () => {
                         <div style={{ padding: '10px 20px', background: '#000000', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h3 style={{ color: '#61dafb' }}>{selectedFile}</h3>
                             <div className="space-x-2">
-                                {isEditing && (
-                                    <button
-                                        onClick={handleSaveFile}
-                                        className="px-3 py-1 bg-[#0078d4] hover:bg-[#0086ef] rounded"
-                                    >
-                                        Save
-                                    </button>
-                                )}
-                                <button
-                                    onClick={handleCorrectCode}
-                                    disabled={correctionLoading}
-                                    className={`px-3 py-1 ${
-                                        correctionLoading 
-                                            ? 'bg-[#333] opacity-50 cursor-not-allowed' 
-                                            : 'bg-[#333] hover:bg-[#444] cursor-pointer'
-                                    } rounded flex items-center space-x-2`}
-                                >
-                                    {correctionLoading ? (
-                                        <>
-                                            <span className="inline-block animate-spin mr-2">⟳</span>
-                                            Analyzing...
-                                        </>
-                                    ) : (
-                                        'Analyze Code'
-                                    )}
-                                </button>
                             </div>
                         </div>
                     )}
@@ -669,7 +701,13 @@ const RepoViewer = () => {
                         </div>
                     ) : selectedFile ? (
                         <div className="flex-1 flex">
-                            <div style={{ flex: 1, height: '100%', background: '#000000' }}>
+                            <div style={{ 
+                                flex: 1, 
+                                height: '100%', 
+                                background: '#000000',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}>
                                 <Editor
                                     height="100%"
                                     defaultLanguage={detectLanguage(selectedFile)}
@@ -681,11 +719,30 @@ const RepoViewer = () => {
                                     theme="vs-dark"
                                     onMount={handleEditorDidMount}
                                     options={{
-                                        minimap: { enabled: true },
+                                        minimap: {
+                                            enabled: true,
+                                            side: 'right',
+                                            size: 'proportional',
+                                            scale: 1,
+                                            showSlider: 'always',
+                                            renderCharacters: true,
+                                            maxColumn: 120
+                                        },
                                         fontSize: 14,
                                         wordWrap: 'on',
                                         automaticLayout: true,
+                                        fixedOverflowWidgets: true,
+                                        scrollBeyondLastLine: false,
+                                        overviewRulerBorder: false,
+                                        scrollbar: {
+                                            useShadows: false,
+                                            verticalHasArrows: false,
+                                            horizontalHasArrows: false,
+                                            vertical: 'visible',
+                                            horizontal: 'visible'
+                                        }
                                     }}
+                                    className="monaco-editor-container"
                                 />
                             </div>
                         </div>
@@ -725,26 +782,6 @@ const RepoViewer = () => {
                     <div className="flex flex-col h-full">
                         <div className="p-4 border-b border-[#333] flex justify-between items-center">
                             <div className="flex space-x-4">
-                                <button
-                                    onClick={() => setActiveRightPanel('analyzer')}
-                                    className={`px-4 py-2 rounded ${
-                                        activeRightPanel === 'analyzer'
-                                            ? 'bg-[#0078d4]'
-                                            : 'bg-[#333] hover:bg-[#444]'
-                                    }`}
-                                >
-                                    Code Analysis
-                                </button>
-                                <button
-                                    onClick={() => setActiveRightPanel('practice')}
-                                    className={`px-4 py-2 rounded ${
-                                        activeRightPanel === 'practice'
-                                            ? 'bg-[#0078d4]'
-                                            : 'bg-[#333] hover:bg-[#444]'
-                                    }`}
-                                >
-                                    Practice Code
-                                </button>
                             </div>
                         </div>
                         <div className="flex-1 overflow-auto">
