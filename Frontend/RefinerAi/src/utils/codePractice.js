@@ -140,49 +140,49 @@ export async function generateCodePractice(analysisContent) {
     7. RESPONSE FORMAT
     The response should be a JSON object with a list of challenges, each structured as follows:
 
-    {
+    {{
     "challenges": [
-        {
+        {{
         "problemStatement": "Clearly defined problem description.",
         "requirements": [
             "List of technical requirements enforcing best practices."
         ],
-        "sampleTestCase": {
+        "sampleTestCase": {{
             "input": "Sample input for testing the solution.",
             "expectedOutput": "Expected output for validation."
-        },
+    }},
         "solution": "Optimized and correct solution that adheres to React best practices."
-        }
+    }}
     ]
-    }
+    }}
 
     8. EXAMPLE CHALLENGE OUTPUT
 
-    {
+    {{
     "challenges": [
-        {
+        {{
         "problemStatement": "Create a custom hook 'usePagination' that manages pagination state, including current page, total pages, and page navigation.",
         "requirements": [
             "The hook should return 'currentPage', 'totalPages', 'nextPage', 'prevPage', and 'setPage'.",
             "Ensure proper boundary handling (no negative pages or exceeding total pages).",
             "Memoize expensive calculations to avoid unnecessary re-renders."
         ],
-        "sampleTestCase": {
-            "input": {
+        "sampleTestCase": {{
+            "input": {{
             "totalItems": 100,
             "itemsPerPage": 10
-            },
-            "expectedOutput": {
+    }},
+            "expectedOutput": {{
             "currentPage": 1,
             "totalPages": 10,
             "nextPage": 2,
             "prevPage": null
-            }
-        },
+    }}
+    }},
         "solution": "export function usePagination(totalItems, itemsPerPage) { const [currentPage, setCurrentPage] = useState(1); const totalPages = Math.ceil(totalItems / itemsPerPage); const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages)); const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1)); return { currentPage, totalPages, nextPage, prevPage, setPage: setCurrentPage }; }"
-        }
+    }}
     ]
-    }
+    }}
 
     Generate a set of 3-5 highly focused, practical coding challenges that directly address the developer's specific knowledge gaps while providing engaging, real-world practice opportunities. Each challenge should reinforce proper React patterns and practices while building the developer's confidence and competence.
     `;
@@ -197,8 +197,18 @@ export async function generateCodePractice(analysisContent) {
                 const jsonStr = jsonMatch[0];
                 console.log('Extracted JSON:', jsonStr);
                 const parsed = JSON.parse(jsonStr);
-                if (parsed && parsed.problemStatement) {
-                    return parsed;
+                if (parsed && parsed.challenges && parsed.challenges.length > 0) {
+                    // Return the first challenge as our practice problem
+                    const challenge = parsed.challenges[0];
+                    return {
+                        problemStatement: challenge.problemStatement,
+                        requirements: challenge.requirements,
+                        testCases: challenge.sampleTestCase ? [challenge.sampleTestCase] : [],
+                        hints: [], // Add empty hints array as it's used in UI
+                        difficulty: "medium",
+                        timeLimit: 30,
+                        solution: challenge.solution
+                    };
                 }
             }
             
@@ -218,12 +228,11 @@ export async function generateCodePractice(analysisContent) {
                 testCases: [
                     {
                         input: "Sample input",
-                        output: "Expected output",
-                        explanation: "This test case validates the basic functionality"
+                        output: "Expected output"
                     }
                 ],
                 difficulty: "medium",
-                timeLimit: "30"
+                timeLimit: 30
             };
         } catch (parseError) {
             console.error("Error parsing practice problem response:", parseError);

@@ -75,7 +75,7 @@ export async function generateQuiz(analysisContent) {
 
         c) INTEGRATIVE THINKING (20%)
         * Ask about trade-offs, performance, and real-world best practices
-        * Example: “How would you refactor this component for better reusability and maintainability?”
+        * Example: "How would you refactor this component for better reusability and maintainability?"
     
 
     4. QUIZ GENERATION
@@ -118,9 +118,9 @@ export async function generateQuiz(analysisContent) {
         * Connect answers back to the developer's original code issues
         
         Create a quiz in the following JSON format:
-        {
+        {{
             "quizzes": [
-                {
+                {{
                     "question": "Specific question about the code analysis",
                     "options": [
                         "First option",
@@ -130,9 +130,9 @@ export async function generateQuiz(analysisContent) {
                     ],
                     "correctAnswer": "The exact text of the correct option",
                     "explanation": "Explanation why this answer is correct"
-                }
+}}
             ]
-        }
+}}
 
     Generate a 10 question personalized quiz that precisely targets the developer's specific knowledge gaps while providing a comprehensive assessment of their React understanding. Each question must directly connect to issues identified in their code while teaching proper React concepts and practices.
     `;
@@ -146,11 +146,32 @@ export async function generateQuiz(analysisContent) {
                 const jsonStr = jsonMatch[0];
                 const parsed = JSON.parse(jsonStr);
                 if (parsed && parsed.quizzes) {
-                    return parsed;
+                    // Transform the quizzes to ensure consistent structure
+                    const formattedQuizzes = parsed.quizzes.map(quiz => {
+                        // Determine difficulty based on question complexity or default to medium
+                        let difficulty = quiz.difficulty || 'medium';
+                        // Ensure difficulty is one of: 'easy', 'medium', 'hard'
+                        if (!['easy', 'medium', 'hard'].includes(difficulty.toLowerCase())) {
+                            difficulty = 'medium';
+                        }
+                        
+                        return {
+                            question: quiz.question || 'Question not provided',
+                            options: Array.isArray(quiz.options) ? quiz.options : [],
+                            correctAnswer: quiz.correctAnswer || '',
+                            explanation: quiz.explanation || 'No explanation provided',
+                            category: quiz.category || 'General',
+                            difficulty: difficulty.toLowerCase(),
+                            relatedConcepts: Array.isArray(quiz.relatedConcepts) ? quiz.relatedConcepts : []
+                        };
+                    });
+                    return {
+                        quizzes: formattedQuizzes
+                    };
                 }
             }
             
-            // If no valid JSON found, create a structured response
+            // Fallback response if JSON parsing fails
             return {
                 quizzes: [{
                     question: "What is the main focus of this code analysis?",
@@ -161,7 +182,10 @@ export async function generateQuiz(analysisContent) {
                         "UI design patterns"
                     ],
                     correctAnswer: "Code quality and best practices",
-                    explanation: "The analysis primarily focuses on code quality, React best practices, and potential improvements."
+                    explanation: "The analysis primarily focuses on code quality, React best practices, and potential improvements.",
+                    category: "General",
+                    difficulty: "medium",
+                    relatedConcepts: ["Code Quality", "Best Practices"]
                 }]
             };
         } catch (parseError) {

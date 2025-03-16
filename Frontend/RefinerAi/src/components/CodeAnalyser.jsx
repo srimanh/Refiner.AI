@@ -225,8 +225,139 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                 )}
 
                 {analysis && !showQuiz && !showPractice && (
-                    <div className="p-6 space-y-6">
-                        {renderMarkdown(analysis)}
+                    <div className="p-6 space-y-8">
+                        {/* Executive Summary */}
+                        <div className="bg-[#ffffff08] p-4 rounded">
+                            <h2 className="text-xl text-[#61dafb] mb-4">Executive Summary</h2>
+                            <p className="text-gray-300">{analysis.executiveSummary}</p>
+                        </div>
+
+                        {/* Concept Mastery Assessment */}
+                        <div className="bg-[#ffffff08] p-4 rounded">
+                            <h2 className="text-xl text-[#61dafb] mb-4">Concept Mastery Assessment</h2>
+                            <div className="space-y-4">
+                                {analysis.conceptMasteryAssessment?.map((concept, index) => (
+                                    <div key={index} className="border-b border-[#333] pb-4 last:border-0">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h3 className="text-lg text-white">{concept.concept}</h3>
+                                            <div className="flex items-center">
+                                                <span className="text-gray-400 mr-2">Score:</span>
+                                                <span className={`px-2 py-1 rounded ${
+                                                    concept.score >= 4 ? 'bg-green-500/20 text-green-400' :
+                                                    concept.score >= 3 ? 'bg-yellow-500/20 text-yellow-400' :
+                                                    'bg-red-500/20 text-red-400'
+                                                }`}>
+                                                    {concept.score}/5
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p className="text-gray-300">{concept.evidence}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Detailed Findings */}
+                        <div className="bg-[#ffffff08] p-4 rounded">
+                            <h2 className="text-xl text-[#61dafb] mb-4">Detailed Findings</h2>
+                            <div className="space-y-6">
+                                {analysis.detailedFindings?.map((finding, index) => (
+                                    <div key={index} className="border-b border-[#333] pb-6 last:border-0">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <h3 className="text-lg text-white">{finding.issue}</h3>
+                                            <span className="text-sm bg-[#333] px-2 py-1 rounded">
+                                                Line {finding.lineNumber}
+                                            </span>
+                                        </div>
+                                        <p className="text-gray-300 mb-3">{finding.description}</p>
+                                        
+                                        {finding.codeExample && (
+                                            <pre className="bg-[#1e1e1e] p-3 rounded mb-3 overflow-x-auto">
+                                                <code className="text-sm text-gray-300">{finding.codeExample}</code>
+                                            </pre>
+                                        )}
+                                        
+                                        <div className="space-y-2 mb-3">
+                                            <p className="text-[#61dafb]">Initial Hint:</p>
+                                            <p className="text-gray-300">{finding.initialHint}</p>
+                                        </div>
+
+                                        {finding.progressiveHints?.length > 0 && (
+                                            <div className="space-y-2 mb-3">
+                                                <p className="text-[#61dafb]">Progressive Hints:</p>
+                                                <ul className="list-disc list-inside space-y-1">
+                                                    {finding.progressiveHints.map((hint, hintIndex) => (
+                                                        <li key={hintIndex} className="text-gray-300">{hint}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+
+                                        <div className="space-y-2 mb-3">
+                                            <p className="text-[#61dafb]">Key Principles:</p>
+                                            <ul className="list-disc list-inside space-y-1">
+                                                {finding.keyPrinciples?.map((principle, principleIndex) => (
+                                                    <li key={principleIndex} className="text-gray-300">{principle}</li>
+                                                ))}
+                                            </ul>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <p className="text-[#61dafb]">Impact:</p>
+                                            <p className="text-gray-300">{finding.impact}</p>
+                                        </div>
+
+                                        {finding.documentationUrl && (
+                                            <a 
+                                                href={finding.documentationUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-block mt-3 text-[#61dafb] hover:underline"
+                                            >
+                                                📚 Learn More
+                                            </a>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Learning Priority Matrix */}
+                        <div className="bg-[#ffffff08] p-4 rounded">
+                            <h2 className="text-xl text-[#61dafb] mb-4">Learning Priority Matrix</h2>
+                            {analysis.learningPriorityMatrix && (
+                                <div className="space-y-4">
+                                    <div>
+                                        <h3 className="text-white mb-2">High Impact Issues:</h3>
+                                        <ul className="list-disc list-inside text-gray-300">
+                                            {analysis.learningPriorityMatrix.highImpact?.map((issue, index) => (
+                                                <li key={index}>{issue}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-white mb-2">Medium Impact Issues:</h3>
+                                        <ul className="list-disc list-inside text-gray-300">
+                                            {analysis.learningPriorityMatrix.mediumImpact?.map((issue, index) => (
+                                                <li key={index}>{issue}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-white mb-2">Low Impact Issues:</h3>
+                                        <ul className="list-disc list-inside text-gray-300">
+                                            {analysis.learningPriorityMatrix.lowImpact?.map((issue, index) => (
+                                                <li key={index}>{issue}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-white mb-2">Learning Dependencies:</h3>
+                                        <p className="text-gray-300">{analysis.learningPriorityMatrix.dependencies}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -235,14 +366,31 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                         <div className="space-y-6">
                             {quizzes.map((quiz, index) => (
                                 <div key={index} className="bg-[#ffffff08] p-4 rounded">
-                                    <h3 className="text-lg text-white mb-3">
-                                        {index + 1}. {quiz.question}
-                                    </h3>
-                                    <div className="space-y-2">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <h3 className="text-lg text-white flex-1">
+                                            {index + 1}. {quiz.question}
+                                        </h3>
+                                        <div className="flex items-center space-x-3 ml-4">
+                                            <span className={`px-2 py-1 rounded text-sm ${
+                                                quiz.difficulty === 'hard' ? 'bg-red-500/20 text-red-400' :
+                                                quiz.difficulty === 'easy' ? 'bg-green-500/20 text-green-400' :
+                                                'bg-yellow-500/20 text-yellow-400'
+                                            }`}>
+                                                {quiz.difficulty ? (
+                                                    quiz.difficulty.charAt(0).toUpperCase() + quiz.difficulty.slice(1)
+                                                ) : 'Medium'}
+                                            </span>
+                                            <span className="bg-[#333] px-2 py-1 rounded text-sm text-gray-300">
+                                                {quiz.category || 'General'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2 mb-4">
                                         {quiz.options.map((option, optIndex) => (
                                             <label
                                                 key={optIndex}
-                                                className={`flex items-center space-x-2 p-2 rounded cursor-pointer ${
+                                                className={`flex items-center space-x-2 p-3 rounded cursor-pointer transition-colors ${
                                                     selectedAnswers[index] === option
                                                         ? 'bg-[#ffffff15]'
                                                         : 'hover:bg-[#ffffff0a]'
@@ -260,36 +408,71 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                                             </label>
                                         ))}
                                     </div>
+
                                     {showAnswers && (
-                                        <div className="mt-3">
-                                            <div className={`p-2 rounded ${
+                                        <div className="mt-4 space-y-3">
+                                            <div className={`p-3 rounded ${
                                                 selectedAnswers[index] === quiz.correctAnswer
                                                     ? 'bg-green-500/20 border border-green-500/50'
                                                     : 'bg-red-500/20 border border-red-500/50'
                                             }`}>
-                                                <p className="font-semibold mb-1">
-                                                    {selectedAnswers[index] === quiz.correctAnswer
-                                                        ? '✓ Correct!'
-                                                        : '✗ Incorrect'}
-                                                </p>
-                                                <p className="text-sm text-gray-300">
+                                                <div className="flex items-center mb-2">
+                                                    <span className={`text-lg mr-2 ${
+                                                        selectedAnswers[index] === quiz.correctAnswer
+                                                            ? 'text-green-400'
+                                                            : 'text-red-400'
+                                                    }`}>
+                                                        {selectedAnswers[index] === quiz.correctAnswer ? '✓' : '✗'}
+                                                    </span>
+                                                    <p className="font-semibold text-gray-200">
+                                                        {selectedAnswers[index] === quiz.correctAnswer
+                                                            ? 'Correct!'
+                                                            : `Incorrect. The correct answer is: ${quiz.correctAnswer}`}
+                                                    </p>
+                                                </div>
+                                                <p className="text-gray-300">
                                                     {quiz.explanation}
                                                 </p>
                                             </div>
+
+                                            {quiz.relatedConcepts && quiz.relatedConcepts.length > 0 && (
+                                                <div className="mt-2">
+                                                    <p className="text-[#61dafb] text-sm mb-1">Related Concepts:</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {quiz.relatedConcepts.map((concept, conceptIndex) => (
+                                                            <span
+                                                                key={conceptIndex}
+                                                                className="bg-[#ffffff08] px-2 py-1 rounded text-sm text-gray-300"
+                                                            >
+                                                                {concept}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
                             ))}
-                            {!showAnswers && Object.keys(selectedAnswers).length > 0 && (
-                                <div className="flex justify-end">
+
+                            <div className="flex justify-between items-center mt-6">
+                                <div className="text-gray-400">
+                                    {showAnswers 
+                                        ? `Score: ${quizzes.reduce((acc, _, idx) => 
+                                            acc + (selectedAnswers[idx] === quizzes[idx].correctAnswer ? 1 : 0), 0
+                                        )}/${quizzes.length}`
+                                        : `${Object.keys(selectedAnswers).length}/${quizzes.length} questions answered`
+                                    }
+                                </div>
+                                {!showAnswers && Object.keys(selectedAnswers).length > 0 && (
                                     <button
                                         onClick={() => setShowAnswers(true)}
-                                        className="px-4 py-2 bg-[#0078d4] hover:bg-[#0086ef] rounded"
+                                        className="px-4 py-2 bg-[#0078d4] hover:bg-[#0086ef] rounded transition-colors"
                                     >
                                         Check Answers
                                     </button>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -334,10 +517,18 @@ function CodeAnalyser({ code, language = 'javascript' }) {
                                         {practiceProblem.testCases.map((test, index) => (
                                             <div key={index} className="bg-[#ffffff08] p-3 rounded">
                                                 <div className="text-gray-300">
-                                                    <span className="text-[#61dafb]">Input:</span> {test.input}
+                                                    <span className="text-[#61dafb]">Input:</span>{' '}
+                                                    {typeof test.input === 'object' 
+                                                        ? JSON.stringify(test.input, null, 2)
+                                                        : test.input
+                                                    }
                                                 </div>
                                                 <div className="text-gray-300">
-                                                    <span className="text-[#61dafb]">Output:</span> {test.output}
+                                                    <span className="text-[#61dafb]">Expected Output:</span>{' '}
+                                                    {typeof test.expectedOutput === 'object'
+                                                        ? JSON.stringify(test.expectedOutput, null, 2)
+                                                        : (test.expectedOutput || test.output)
+                                                    }
                                                 </div>
                                             </div>
                                         ))}

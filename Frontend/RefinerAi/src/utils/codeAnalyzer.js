@@ -95,17 +95,17 @@ export async function analyzeCode(fileContent, fileName = 'untitled') {
     4. COMPREHENSIVE KNOWLEDGE GAP REPORT
     Synthesize your findings into a JSON object with the following structure:
     
-    {
+    {{
         "executiveSummary": "Brief overview of major knowledge gaps",
         "conceptMasteryAssessment": [
-        {
+        {{
             "concept": "Concept name",
             "score": 1-5,
             "evidence": "Brief evidence"
-        }
+}}
         ],
         "detailedFindings": [
-        {
+        {{
             "issue": "Name of knowledge gap",
             "lineNumber":"Line number of the code example",
             "description": "Detailed description of the concept",
@@ -119,15 +119,15 @@ export async function analyzeCode(fileContent, fileName = 'untitled') {
             "keyPrinciples": ["Principle 1", "Principle 2"],
             "impact": "Why understanding this matters",
             "documentationUrl": "Link to React docs"
-        }
+}}
         ],
         "learningPriorityMatrix": {
         "highImpact": ["Issue 1", "Issue 2"],
         "mediumImpact": ["Issue 3"],
         "lowImpact": ["Issue 4"],
         "dependencies": "Description of learning dependencies"
-        }
-    }
+}}
+}}
 
     Be ruthlessly detailed in your analysis. Explain every issue with crystal clarity, citing specific lines of code and explaining exactly why they indicate a knowledge gap. Your ultimate goal is to create a learning roadmap that precisely identifies what concepts the developer needs to master.
 
