@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const bodyParser = require('body-parser');
+const path = require('path');
+const terminalRouter = require('./server/api/terminal');
 
 const fetch = (...args) => 
   import('node-fetch').then(({default: fetch}) => fetch(...args));
@@ -12,8 +14,25 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const app = express();
 
-app.use(cors());
-app.use(bodyParser.json());
+// Configure CORS to allow requests from your frontend
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
+
+// Increase payload size limit for large files
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+
+// Create workspaces directory if it doesn't exist
+const workspacesDir = path.join(__dirname, 'workspaces');
+if (!require('fs').existsSync(workspacesDir)) {
+  require('fs').mkdirSync(workspacesDir, { recursive: true });
+}
+
+// Mount the terminal router
+app.use('/api/terminal', terminalRouter);
 
 // Get access token
 app.get('/getAccessToken', async (req, res) => {
