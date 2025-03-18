@@ -3,7 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const bodyParser = require('body-parser');
 const path = require('path');
-const terminalRouter = require('./server/api/terminal');
+const terminalRouter = require('./terminal'); // Update the path to match your file structure
 
 const fetch = (...args) => 
   import('node-fetch').then(({default: fetch}) => fetch(...args));
@@ -17,7 +17,7 @@ const app = express();
 // Configure CORS to allow requests from your frontend
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:3000'],
-  methods: ['GET', 'POST'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
 
@@ -31,8 +31,26 @@ if (!require('fs').existsSync(workspacesDir)) {
   require('fs').mkdirSync(workspacesDir, { recursive: true });
 }
 
-// Mount the terminal router
-app.use('/api/terminal', terminalRouter);
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ 
+    success: false, 
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
+// Mount the terminal router with proper error handling
+app.use('/api/terminal', (req, res, next) => {
+  console.log('Terminal API Request:', {
+    method: req.method,
+    path: req.path,
+    body: req.body,
+    query: req.query
+  });
+  next();
+}, terminalRouter);
 
 // Get access token
 app.get('/getAccessToken', async (req, res) => {
@@ -58,7 +76,6 @@ app.get('/getAccessToken', async (req, res) => {
           client_id: CLIENT_ID,
           client_secret: CLIENT_SECRET,
           code: requestToken,
-          // redirect_uri: "https://refinerai-1.onrender.com",
           redirect_uri: "http://localhost:5173/"
         })
       });      
@@ -90,7 +107,7 @@ app.get('/getUserData', async (req, res) => {
       method: "GET",
       headers: {
         "Authorization": authHeader,
-        "User-Agent": "GitHub-OAuth-App"  // GitHub API requires a user agent
+        "User-Agent": "GitHub-OAuth-App"
       }
     });
     
@@ -109,6 +126,9 @@ app.get('/getUserData', async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("Server started on http://localhost:3000");
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server started on http://localhost:${PORT}`);
+  console.log('Workspaces directory:', workspacesDir);
 });
